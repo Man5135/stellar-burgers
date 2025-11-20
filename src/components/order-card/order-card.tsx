@@ -1,5 +1,6 @@
 import { FC, memo, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAppSelector, RootState } from '../../services/store';
 
 import { OrderCardProps } from './type';
 import { TIngredient } from '@utils-types';
@@ -9,16 +10,18 @@ const maxIngredients = 6;
 
 export const OrderCard: FC<OrderCardProps> = memo(({ order }) => {
   const location = useLocation();
-
-  /** TODO: взять переменную из стора */
-  const ingredients: TIngredient[] = [];
+  const ingredients = useAppSelector(
+    (state: RootState) => state.ingredients.ingredients
+  );
 
   const orderInfo = useMemo(() => {
     if (!ingredients.length) return null;
 
     const ingredientsInfo = order.ingredients.reduce(
       (acc: TIngredient[], item: string) => {
-        const ingredient = ingredients.find((ing) => ing._id === item);
+        const ingredient = ingredients.find(
+          (ing: TIngredient) => ing._id === item
+        );
         if (ingredient) return [...acc, ingredient];
         return acc;
       },

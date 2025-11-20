@@ -1,10 +1,12 @@
 import { FC } from 'react';
+import { useAppSelector, RootState } from '../../services/store';
 import { Preloader } from '../ui/preloader';
 import { IngredientDetailsUI } from '../ui/ingredient-details';
 
 export const IngredientDetails: FC = () => {
-  /** TODO: взять переменную из стора */
-  const ingredientData = null;
+  const ingredientData = useAppSelector(
+    (state: RootState) => state.ingredientDetails.ingredient
+  );
 
   if (!ingredientData) {
     return <Preloader />;

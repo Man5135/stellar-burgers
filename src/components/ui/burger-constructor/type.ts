@@ -7,4 +7,6 @@ export type BurgerConstructorUIProps = {
   orderModalData: TOrder | null;
   onOrderClick: () => void;
   closeOrderModal: () => void;
+  onClearConstructor: () => void;
+  isEmpty: boolean;
 };

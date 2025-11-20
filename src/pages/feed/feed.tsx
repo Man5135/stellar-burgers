@@ -1,15 +1,25 @@
 import { Preloader } from '@ui';
 import { FeedUI } from '@ui-pages';
-import { TOrder } from '@utils-types';
-import { FC } from 'react';
+import { FC, useEffect } from 'react';
+import { useAppSelector, useAppDispatch } from '../../services/store';
+import { fetchOrders } from '../../services/slices/ordersSlice';
+import { fetchIngredients } from '../../services/slices/ingredientsSlice'; // 1. Импортируем экшен
 
 export const Feed: FC = () => {
-  /** TODO: взять переменную из стора */
-  const orders: TOrder[] = [];
+  const dispatch = useAppDispatch();
+  const orders = useAppSelector((state) => state.orders.orders);
+  const loading = useAppSelector((state) => state.orders.loading);
 
-  if (!orders.length) {
+  useEffect(() => {
+    dispatch(fetchOrders());
+    dispatch(fetchIngredients());
+  }, [dispatch]);
+
+  if (loading) {
     return <Preloader />;
   }
 
-  <FeedUI orders={orders} handleGetFeeds={() => {}} />;
+  return (
+    <FeedUI orders={orders} handleGetFeeds={() => dispatch(fetchOrders())} />
+  );
 };
