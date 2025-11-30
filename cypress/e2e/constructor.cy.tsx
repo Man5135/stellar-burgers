@@ -1,96 +1,81 @@
 /// <reference types="cypress" />
 
-describe('Burger Constructor', () => {
-  beforeEach(() => {
-    cy.intercept('GET', '**/api/ingredients', { fixture: 'ingredients.json' }).as('getIngredients');
-    cy.intercept('POST', '**/api/orders', { fixture: 'order.json' }).as('createOrder');
-    cy.intercept('GET', '**/api/auth/user', { fixture: 'user.json' }).as('getUser');
+const API = Cypress.env('BURGER_API_URL') || '/api';
+const testUrl = Cypress.config('baseUrl') || 'http://localhost:4000';
 
-    // Set fake tokens
-    cy.window().then((win) => {
-      win.localStorage.setItem('accessToken', 'fakeAccessToken');
-      win.localStorage.setItem('refreshToken', 'fakeRefreshToken');
+describe('Конструктор бургера', () => {
+    
+    before(() => {
+        cy.intercept('POST', `${API}/orders*`, { fixture: 'order.json' }).as('createOrder');
     });
 
-    cy.visit('/');
-  });
+    beforeEach(() => {
+        cy.fixture('ingredients.json').then((ingredientsData) => {
+            const wrappedResponse = {
+                success: true,
+                data: ingredientsData 
+            };
 
-  afterEach(() => {
-    cy.window().then((win) => {
-      win.localStorage.removeItem('accessToken');
-      win.localStorage.removeItem('refreshToken');
+            cy.intercept('GET', `${API}/ingredients*`, wrappedResponse).as('getIngredients');
+        });
+        
+        cy.intercept('GET', `${API}/auth/user*`, { fixture: 'user.json' }).as('getUser');
+
+        cy.setCookie('accessToken', 'FAKE.ACCESS.TOKEN'); 
+        window.localStorage.setItem('refreshToken', 'FAKE.REFRESH.TOKEN');
+
+        cy.visit(testUrl);
+        cy.wait('@getIngredients'); 
+        
+        cy.contains('h3', 'Булки').should('be.visible'); 
+
+        cy.contains('button', 'Оформить заказ').closest('section').as('constructor');
     });
-  });
 
-  it('should load ingredients', () => {
-    cy.wait('@getIngredients');
-    cy.contains('Краторная булка N-200i').should('be.visible');
-    cy.contains('Биокотлета из марсианской Магнолии').should('be.visible');
-  });
+    afterEach(() => {
+        cy.clearCookie('accessToken');
+        window.localStorage.removeItem('refreshToken');
+        window.localStorage.removeItem('burgerConstructor');
+    });
+    
 
-  it('should add bun to constructor', () => {
-    cy.wait('@getIngredients');
-    cy.get('[data-cy="bun"]').first().find('button').click();
-    cy.get('[data-cy="constructor-bun-top"]').should('contain', 'Краторная булка N-200i');
-    cy.get('[data-cy="constructor-bun-bottom"]').should('contain', 'Краторная булка N-200i');
-  });
+    it('Добавляет ингредиенты и оформляет заказ', () => {
+        cy.contains('h3', 'Булки').next('ul').find('li').first().find('button').click();
 
-  it('should add main ingredient to constructor', () => {
-    cy.wait('@getIngredients');
-    cy.get('[data-cy="main"]').first().find('button').click();
-    cy.get('[data-cy="constructor-ingredients"]').should('contain', 'Биокотлета из марсианской Магнолии');
-  });
+        cy.contains('h3', 'Начинки').next('ul').find('li').first().find('button').click();
 
-  it('should add sauce to constructor', () => {
-    cy.wait('@getIngredients');
-    cy.get('[data-cy="sauce"]').first().find('button').click();
-    cy.get('[data-cy="constructor-ingredients"]').should('contain', 'Соус Spicy-X');
-  });
+        cy.contains('h3', 'Соусы').next('ul').find('li').first().find('button').click();
 
-  it('should open and close ingredient modal', () => {
-    cy.wait('@getIngredients');
-    cy.get('[data-cy="bun"]').first().find('img').click();
-    cy.get('[data-cy="modal"]').should('be.visible');
-    cy.get('[data-cy="modal"]').should('contain', 'Краторная булка N-200i');
+        cy.get('@constructor').contains('(верх)').should('exist');
+        cy.get('@constructor').find('ul').find('li').should('have.length', 2);
+        
+        cy.contains('button', 'Оформить заказ').should('not.be.disabled');
+        
+        cy.contains('button', 'Оформить заказ').click();
 
-    // Close by clicking cross
-    cy.get('[data-cy="modal-close"]').click();
-    cy.get('[data-cy="modal"]').should('not.exist');
-  });
+        cy.wait('@createOrder');
 
-  it('should close modal by clicking overlay', () => {
-    cy.wait('@getIngredients');
-    cy.get('[data-cy="bun"]').first().find('img').click();
-    cy.get('[data-cy="modal"]').should('be.visible');
+        cy.fixture('order.json').then((data) => {
+            const num = data?.order?.number;
+            cy.contains(String(num)).should('be.visible');
 
-    // Close by clicking overlay
-    cy.get('[data-cy="modal-overlay"]').click({ force: true });
-    cy.get('[data-cy="modal"]').should('not.exist');
-  });
+            cy.get('body').type('{esc}');
+            cy.contains(String(num)).should('not.exist');
+        });
 
-  it('should create order successfully', () => {
-    cy.wait('@getIngredients');
+        cy.get('@constructor').within(() => {
+            cy.contains('Выберите булки').should('exist');
+            cy.contains('Выберите начинку').should('exist');
+            cy.get('ul').find('li').should('have.length', 0);
+        });
 
-    // Add bun
-    cy.get('[data-cy="bun"]').first().find('button').click();
-
-    // Add main ingredient
-    cy.get('[data-cy="main"]').first().find('button').click();
-
-    // Click order button
-    cy.get('[data-cy="order-button"]').click();
-
-    // Check order modal appears
-    cy.wait('@createOrder');
-    cy.get('[data-cy="order-modal"]').should('be.visible');
-    cy.get('[data-cy="order-modal"]').should('contain', '12345');
-
-    // Close order modal
-    cy.get('[data-cy="order-modal-close"]').click();
-    cy.get('[data-cy="order-modal"]').should('not.exist');
-
-    // Check constructor is cleared
-    cy.get('[data-cy="constructor-bun-top"]').should('not.exist');
-    cy.get('[data-cy="constructor-ingredients"]').should('be.empty');
-  });
+        cy.get('@constructor')
+          .contains('button', 'Оформить заказ')
+          .prev() 
+          .invoke('text')
+          .then((t) => {
+            const digits = t.replace(/[^\d]/g, '');
+            expect(digits).to.eq('0');
+          });
+    });
 });

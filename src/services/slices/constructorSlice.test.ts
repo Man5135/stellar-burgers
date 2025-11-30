@@ -20,65 +20,85 @@ const mockIngredient: TConstructorIngredient = {
   id: 'unique-id'
 };
 
+const defaultInitialState = {
+  bun: null,
+  ingredients: [],
+  orderRequest: false,
+  orderModalData: null,
+  error: null,
+  loading: false
+};
+
 describe('constructorSlice', () => {
   it('should return the initial state', () => {
-    expect(constructorReducer(undefined, { type: 'UNKNOWN_ACTION' })).toEqual({
-      bun: null,
-      ingredients: [],
-      orderRequest: false,
-      orderModalData: null,
-      error: null,
-      loading: false
-    });
+    expect(constructorReducer(undefined, { type: 'UNKNOWN_ACTION' })).toEqual(
+      defaultInitialState
+    );
   });
 
   describe('addIngredient', () => {
     it('should add an ingredient to the constructor', () => {
       const action = addIngredient(mockIngredient);
       const result = constructorReducer(undefined, action);
-      expect(result.ingredients).toHaveLength(1);
-      expect(result.ingredients[0]).toEqual({
-        ...mockIngredient,
-        id: expect.any(String)
-      });
+      
+      const expectedState = {
+        ...defaultInitialState,
+        ingredients: [
+          {
+            ...mockIngredient,
+            id: expect.any(String)
+          }
+        ]
+      };
+      
+      expect(result).toEqual(expectedState);
     });
   });
 
   describe('removeIngredient', () => {
     it('should remove an ingredient from the constructor', () => {
-      const initialState = {
-        bun: null,
-        ingredients: [{ ...mockIngredient, id: 'test-id' }],
-        orderRequest: false,
-        orderModalData: null,
-        error: null,
-        loading: false
+      const stateWithIngredient = {
+        ...defaultInitialState,
+        ingredients: [{ ...mockIngredient, id: 'test-id' }]
       };
+      
       const action = removeIngredient('test-id');
-      const result = constructorReducer(initialState, action);
-      expect(result.ingredients).toHaveLength(0);
+      const result = constructorReducer(stateWithIngredient, action);
+      
+      const expectedState = {
+          ...defaultInitialState,
+          ingredients: []
+      };
+
+      expect(result).toEqual(expectedState);
     });
   });
 
   describe('moveIngredient', () => {
     it('should move an ingredient in the constructor', () => {
       const initialState = {
-        bun: null,
+        ...defaultInitialState,
         ingredients: [
           { ...mockIngredient, id: '1', name: 'First' },
           { ...mockIngredient, id: '2', name: 'Second' },
           { ...mockIngredient, id: '3', name: 'Third' }
-        ],
-        orderRequest: false,
-        orderModalData: null,
-        error: null,
-        loading: false
+        ]
       };
       const action = moveIngredient({ fromIndex: 0, toIndex: 2 });
       const result = constructorReducer(initialState, action);
-      expect(result.ingredients[0].name).toBe('Second');
-      expect(result.ingredients[1].name).toBe('Third');
-      expect(result.ingredients[2].name).toBe('First');
+
+      const expectedIngredients = [
+          initialState.ingredients[1],
+          initialState.ingredients[2],
+          initialState.ingredients[0]
+      ];
+      
+      const expectedState = {
+          ...defaultInitialState,
+          ingredients: expectedIngredients
+      };
+      
+      expect(result).toEqual(expectedState);
     });
   });
 });
